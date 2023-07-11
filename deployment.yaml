@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: stackmap-wmts
+spec:
+  selector:
+    app: stackmap-wmts
+  ports:
+  - name: "http"
+    protocol: "TCP"
+    port: 9099
+    targetPort: 9099
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wmts
+spec:
+  selector:
+    matchLabels:
+      app: stackmap-wmts
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: stackmap-wmts
+    spec:
+      
+      containers:
+      - name: stackmap-wmts
+        image: stackmap-wmts:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9099
+
+        env:
+        - name: WMS_HOST
+          value: http://stackmap-mapserver.default.svc.cluster.local:6000

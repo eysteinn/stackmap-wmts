@@ -1,18 +1,15 @@
-use actix_web::{middleware, web, App, HttpRequest, HttpServer};
-use qs::from_str;
-//use qstring::QString;
-//use std::env;
+use actix_web::{web, App, HttpRequest, HttpServer};
+use std::env;
 use std::fs;
-use std::io::Write;
-use std::process::Output;
-use url::Url;
-use actix_web::{get, HttpResponse, Responder};
-use std::fs::File;
+use actix_web::{HttpResponse, Responder};
 use std::collections::HashMap;
+use chrono::{DateTime};
 
 #[macro_use]
 //extern crate serde_derive;
 extern crate serde_qs as qs;
+
+//static WMTSCapabilitiesFile :&str = include_str!("../WMTSCapabilities.xml");
 
 
 //async fn index(req: HttpRequest) -> &'static str {
@@ -39,11 +36,6 @@ fn imageresponder(filename: String) -> impl Responder {
         .content_type("image/png")
         .body(bytes)
 }
-
-/*pub async fn get_field_value(field: web::Path<(String, String)>) -> HttpResponse {
-    field.
-}*/
-
 
 //#[derive(Debug, PartialEq, Deserialize)]
 pub struct Request {
@@ -78,18 +70,27 @@ async fn fetch_image(url: String, tilename: String) -> String{
     let bytes = response.unwrap().bytes() 
     fs::write(tilename, bytes);*/
     //let mut file = std::fs::File::create(&tilename).unwrap();
-
-    let exists = std::path::Path::new(&tilename).exists();
-    if exists {
+    let path = std::path::Path::new(&tilename);
+    
+    //let exists = std::path::Path::new(&tilename).exists();
+    
+    if path.exists() {
         println!("Using Cached: {}", tilename);
         return tilename
     }
     println!("Downloading from server: {}", tilename);
+    //println!("Using url: {}", url);
 
-    let response = reqwest::get(&url).await.unwrap();
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).expect("Failed to create parent directory");
+    }
+
+    let response: reqwest::Response = reqwest::get(&url).await.unwrap();
     let bytes = response.bytes().await.unwrap();
-
-    fs::write(&tilename, &bytes).unwrap();
+    
+    //fs::write(&tilename, &bytes).unwrap();
+    fs::write(path, &bytes).unwrap();
 
     tilename
     /*let response = reqwest::get(url).await;
@@ -101,14 +102,27 @@ async fn fetch_image(url: String, tilename: String) -> String{
 
 
 
-async fn wmts_service(req: HttpRequest) -> impl Responder {
+async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Responder {
+    /*let wmts_host: String;
+    if let Ok(value) = env::var("WMTS_HOST") {
+        wmts_host = value;
+    } else 
+        wmts_host = "http://localhost:9099".to_string();
+        println!("WMTS_HOST not found, setting value to {}", wmts_host);*/
+    //let wmts_host = env::var("EXTERNAL_WMTS_HOST").expect("Environmental variable EXTERNAL_WMTS_HOST not found");
+    let project = route.into_inner().0.to_lowercase();
+    // TODO: need to make sure that 'project' string does not contain any '../' to prevent injection
 
     let query_str = req.query_string().to_lowercase();
-    let map: HashMap<String, String> = qs::from_str(&query_str).unwrap();
-    if let Some(value) = map.get("request") {
+    let query_map: HashMap<String, String> = qs::from_str(&query_str).unwrap();
+    if let Some(value) = query_map.get("request") {
+        
         if value == "getcapabilities" {
             println!("GetCapabilities");
-            let contents: String = fs::read_to_string("WMTSCapabilities.xml").unwrap();
+            let path = format!("./projects/{}/WMTSCapabilities.xml", project);
+            let mut contents: String = fs::read_to_string(path).unwrap();
+            //contents = contents.replace("{EXTERNAL_WMTS_HOST}", &wmts_host).replace("{PROJECT}", &project);
+            //contents = contents.replace("{PROJECT}", &project);
             return HttpResponse::Ok()
             .content_type("application/xml")
             .body(contents)
@@ -116,51 +130,57 @@ async fn wmts_service(req: HttpRequest) -> impl Responder {
         if value == "gettile" {
             //println!("GetTile");
             //wmts?request=GetTile&layer=modis-green-snow&time=%7BTime%7D&tilematrixset=webmercator&tilematrix=03&tilecol=1&tilerow=7.png
-            
+            //let wms_host = env::var("WMS_HOST").expect("Environmental variable WMS_HOST not found");
 
-            let mut ytile: u32 = 0;
-            let mut xtile: u32 = 0;
-            //let mut ytile u32 = 0;
-            let mut zoom: u8 = 0;
-
-
-            if let Some(value) = map.get("tilematrix") {
-                let num = value.parse::<u8>(); // parse the string as a u32
-                match num {
-                    Ok(parsed_zoom) =>  zoom = parsed_zoom,
-                    Err(e) => println!("Error parsing number: {}", e),
-                } 
-            }
-            if let Some(value) = map.get("tilecol") {
-                let num = value.parse::<u32>(); // parse the string as a u32
-                match num {
-                    Ok(parsed_value) =>  xtile = parsed_value,
-                    Err(e) => println!("Error parsing number: {}", e),
-                } 
-            }
-            if let Some(value) = map.get("tilerow") {
-                let num = value.parse::<u32>(); // parse the string as a u32
-                match num {
-                    Ok(parsed_value) =>  ytile = parsed_value,
-                    Err(e) => println!("Error parsing number: {}", e),
-                } 
+            let wms_host: String;
+            if let Ok(value) = env::var("WMS_HOST") {
+                wms_host = value;
+            } else {
+                wms_host = "stackmap-mapserver.default.svc.cluster.local".to_string();
+                println!("Environmental variable WMS_HOST not found, setting to {}", wms_host);
             }
             
+            let zoom = query_map.get("tilematrix").unwrap().parse::<u8>().unwrap();
+            let xtile = query_map.get("tilecol").unwrap().parse::<u32>().unwrap();
+            let ytile = query_map.get("tilerow").unwrap().parse::<u32>().unwrap();
+            let layer = query_map.get("layer").expect("Missing parameter: LAYER");
+            let mut timestr: String = query_map.get("time").cloned().unwrap_or("".to_string());
+            //let mut dt : DateTime<chrono::UTC>;
+            let mut timedir: String = "default".to_string();
+            if !timestr.is_empty() {
+                /*Use Chrono to format the timestr in to actual datetime object. 
+                This will make directory structure predictable.*/
+                //let dt = timestr.parse::<DateTime<chrono::UTC>>().expect("Could not parse time parameter");
+                let dt = timestr.parse::<DateTime<chrono::UTC>>().expect("Could not parse time parameter");
+                timestr = dt.format("%Y-%m-%dT%H:%M:%S").to_string();
+                timedir = dt.format("%Y%m%dT%H%M%S").to_string();
+            }
+            //let timestr = query_map.get("time").unwrap_or("").to_string();
 
             let mut grid = Grid::web_mercator();
             grid.origin = Origin::TopLeft;
             let extent = grid.tile_extent(xtile, ytile, zoom);
             
             //println!("{}, {}, {}, {}", extent.minx, extent.miny, extent.maxx, extent.maxy);
-            let tilename = format!("tilecache/{}_{}_{}.png", zoom, xtile, ytile);
+            
+            let tilename = format!("tilecache/{}/{}/{}/{}_{}_{}.png", project, layer, timedir, zoom, xtile, ytile);
             let width = 256;
-            let height = 256;
-            let url2: String = format!("http://localhost:9080/cgi-bin/mapserv?map=/mapfiles/vedur/rasters.map&program=mapserv&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS=modis-green-snow&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true&TIME=2022-03-14T10:40:00Z",
-                 extent.minx, extent.miny, extent.maxx, extent.maxy, width, height);
+            let height: i32 = 256;
+            /*let url: String = format!("http://localhost:9080/cgi-bin/mapserv?map=/mapfiles/vedur/rasters.map&program=mapserv&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS=modis-green-snow&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true&TIME=2022-03-14T10:40:00Z",
+                 extent.minx, extent.miny, extent.maxx, extent.maxy, width, height);*/
+            
+
+            let mut url: String = format!("{}/cgi-bin/mapserv?map=/mapfiles/{}/rasters.map&program=mapserv&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS={}&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true&TIME=2022-03-14T10:40:00Z",
+            wms_host, project, extent.minx, extent.miny, extent.maxx, extent.maxy, width, height, layer);
                  //extent.minx, extent.maxy, extent.maxx, extent.miny);
-            let tilename = fetch_image(url2, tilename).await;
+            
+            if !timestr.is_empty() {
+                url = format!("{}&time={}", url, timestr);
+            }
+
+            let tilename = fetch_image(url, tilename).await;
             //let bytes = fs::read("002.png").unwrap();
-            println!("{}, {}", extent.maxx-extent.minx, extent.maxy- extent.miny);
+            //println!("{}, {}", extent.maxx-extent.minx, extent.maxy- extent.miny);
             let bytes = fs::read(tilename).unwrap();
     //.read_to_end(&mut bytes).unwrap();
 
@@ -181,120 +201,31 @@ async fn wmts_service(req: HttpRequest) -> impl Responder {
     //sString::from("done")
 }
 
-async fn gettile(req: HttpRequest) -> impl Responder {
-    let query_str = req.query_string().to_lowercase();
-    //let input: Request = qs::from_str(&query_str).unwrap();
-    let map: HashMap<String, String> = qs::from_str(&query_str).unwrap();
-    
-    if let Some(value) = map.get("foo") {
-
-        println!("Found FOO!");
-        println!("{}", value);
-        let contents: String = fs::read_to_string("WMTSCapabilities.xml").unwrap();
-        //contents
-        return HttpResponse::Ok()
-            .content_type("application/xml")
-            .body(contents)
-    } 
-
-    let bytes = fs::read("002.png").unwrap();
-    //.read_to_end(&mut bytes).unwrap();
-
-    // Set the Content-Type header to indicate that we are returning a PNG image
-    
-    HttpResponse::Ok()
-        .content_type("image/png")
-        .body(bytes)
-    //println!("{:?}", map);
-    //"DONE"
-    /*if input.request == "gettile" {
-        println!("Processing GetTile");
-        imageresponder("abc".to_string())
-    } else {*/
-        /*println!("input: {}", input.request);
-
-        format!("Request: {}", input.request)*/
-
-        //imageresponder("abc".to_string())
-    //}
-
-
-    /*let url = Url::try_from(req.query_string()).unwrap();
-
-    Url::parse(input)
-
-    //let qs = QString::from(query_str);
-
-    url.query().
-    
-    if !qs.has("request") {
-        return "Missing Request parameter";
-    }
-
-    let request = qs.get("request").unwrap().to_lowercase();
-
-    if request == "getcapabilities" {
-        "Request is GetCapabilities"
-    } else if request == "gettile" {
-        "Request is GetTile"
-    } else {
-        "Error"
-    }*/
-   // "Hallo"
-}
-
-async fn tile(req: HttpRequest) -> impl Responder {
-    //let mut file = File::open("image.png").unwrap();
-    print!("path: {}", req.path());
-    /*let query_str = req.query_string(); // "name=ferret"
-    let qs = QString::from(query_str);
-
-    if qs.get(name).contains("request") {
-        let qs = QString::from(query_str);
-        print!("{}",qs);
-        imageresponder(qs.to_string())
-    } else {
-        "Nothing"
-    }*/
-
-    "Nothing"
-    /*let mut bytes = Vec::new();
-    bytes = fs::read("002.png").unwrap();
-    //.read_to_end(&mut bytes).unwrap();
-
-    // Set the Content-Type header to indicate that we are returning a PNG image
-    HttpResponse::Ok()
-        .content_type("image/png")
-        .body(bytes)*/
-
-    /*Ok(HttpResponse::build(StatusCode::OK)
-        .content_type("image/jpeg")
-        .body(image_content))*/
-
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     //env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     //log::info!("starting HTTP server at http://localhost:9099");
     println!("starting HTTP server at http://localhost:9099");
-
     HttpServer::new(|| {
         App::new()
             // enable logger
             //.wrap(middleware::Logger::default())
-            //.service(web::resource("/wmts/1.0.0/getcapabilities").route(web::get().to(get_capabilities)))
-            .service(web::resource("/wmts/1.0.0/GetCapabilities").route(web::get().to(get_capabilities)))
-            .service(web::resource("/wmts/1.0.0/GetTile").to(gettile))
-            .service(web::resource("/wmts").to(wmts_service))
+            //.service(web::resource("/wmts/1.0.0/GetCapabilities").route(web::get().to(get_capabilities)))
+            //.service(web::resource("/wmts/1.0.0/GetTile").to(gettile))
+            .service(web::resource("/projects/{project}/services/wmts").to(wmts_service))
             //.service(web::resource("/wmts/{tail}*").route(web::get().to(tile)))
             //.service(web::resource("/index.html").route(web::get().to(|| async { "Hello world!" }))
             //.service(web::resource("/").to(index))
+            .default_service(web::route().to(|| {println!("Default Route"); HttpResponse::NotFound() }))
     })
     .bind(("127.0.0.1", 9099))?
     .run()
     .await
+    /*let app = App::new()
+    .service(web::resource("/wmts").to(wmts_service))
+    .default_service(web::to(|| HttpResponse::NotFound()));*/
+    
 }
 
 
