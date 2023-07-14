@@ -40,7 +40,7 @@ k3s-load:
 	docker save $(DOCKERIMAGE) | sudo k3s ctr images import -
 
 k8s-deploy:
-	kube apply -f deployment.yaml
+	kubectl apply -f deployment.yaml
 
 #swagger-build:
 #	swagger generate spec -i ./swagger/swagger_base.yaml -o ./swagger.yaml
