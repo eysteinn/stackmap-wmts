@@ -103,6 +103,12 @@ async fn fetch_image(url: String, tilename: String) -> String{
 
 
 async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Responder {
+    /*let domain = req.connection_info().host().to_owned();
+    println!("Domain: {}", domain);
+    println!("Scheme: {}", req.connection_info().scheme());
+    println!("peer_addr: {}", req.connection_info().peer_addr().unwrap());
+    let host = req.headers().get("Host").unwrap();
+    println!("Host: {}", host.to_str().unwrap());*/
     /*let wmts_host: String;
     if let Ok(value) = env::var("WMTS_HOST") {
         wmts_host = value;
@@ -119,8 +125,19 @@ async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Res
         
         if value == "getcapabilities" {
             println!("GetCapabilities");
+            let wmts_domain: String;
+            if let Ok(value) = env::var("WMTS_DOMAIN") {
+                wmts_domain = value;
+                println!("Found WMTS_DOMAIN env variable")
+            } else {
+                let scheme = req.connection_info().scheme().to_owned();
+                let host = req.connection_info().host().to_owned();
+                wmts_domain = format!("{}://{}", scheme, host);
+            }
             let path = format!("./projects/{}/WMTSCapabilities.xml", project);
             let mut contents: String = fs::read_to_string(path).unwrap();
+            contents = contents.replace("{WMTS_DOMAIN}", &wmts_domain);
+            
             //contents = contents.replace("{EXTERNAL_WMTS_HOST}", &wmts_host).replace("{PROJECT}", &project);
             //contents = contents.replace("{PROJECT}", &project);
             return HttpResponse::Ok()

@@ -36,7 +36,7 @@
         <TileMatrixSet>webmercator</TileMatrixSet>
       </TileMatrixSetLink>
       <ResourceURL format="image/png" resourceType="tile"
-              template='localhost:9099/vedur/services/wmts?request=GetTile&amp;layer=modis-true-color-crefl&amp;tilematrixset={TileMatrixSet}&amp;tilematrix={TileMatrix}&amp;tilecol={TileCol}&amp;tilerow={TileRow}&amp;format=.png' />
+              template='{WMTS_DOMAIN}/vedur/services/wmts?request=GetTile&amp;layer=modis-true-color-crefl&amp;tilematrixset={TileMatrixSet}&amp;tilematrix={TileMatrix}&amp;tilecol={TileCol}&amp;tilerow={TileRow}&amp;format=.png' />
     </Layer>
     <TileMatrixSet>
       <ows:Identifier>webmercator</ows:Identifier>
@@ -223,5 +223,5 @@
       </TileMatrix>
     </TileMatrixSet>
   </Contents>
-  <ServiceMetadataURL xlink:href="localhost:9099/vedur/services/wmts?request=GetCapabilities"/>
+  <ServiceMetadataURL xlink:href="{WMTS_DOMAIN}/vedur/services/wmts?request=GetCapabilities"/>
 </Capabilities>
