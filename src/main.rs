@@ -208,7 +208,7 @@ async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Res
                  extent.minx, extent.miny, extent.maxx, extent.maxy, width, height);*/
             
 
-            let mut url: String = format!("{}/cgi-bin/mapserv?map=/mapfiles/{}/rasters.map&program=mapserv&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS={}&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true&TIME=2022-03-14T10:40:00Z",
+            let mut url: String = format!("{}?map=/mapfiles/{}/rasters.map&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS={}&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true&TIME=2022-03-14T10:40:00Z",
             wms_host, project, extent.minx, extent.miny, extent.maxx, extent.maxy, width, height, layer);
                  //extent.minx, extent.maxy, extent.maxx, extent.miny);
             
