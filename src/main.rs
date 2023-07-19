@@ -101,6 +101,27 @@ async fn fetch_image(url: String, tilename: String) -> String{
 }
 
 
+async fn leaflet_service(route: web::Path<(String, String,)>, req: HttpRequest) -> impl Responder {
+    let (project, layer) = route.into_inner();
+    let wmts_domain: String;
+    if let Ok(value) = env::var("WMTS_DOMAIN") {
+        wmts_domain = value;
+        println!("Found WMTS_DOMAIN env variable")
+    } else {
+        let scheme = req.connection_info().scheme().to_owned();
+        let host = req.connection_info().host().to_owned();
+        wmts_domain = format!("{}://{}", scheme, host);
+    }
+    let mut leaflet = include_str!("leaflet_embed.html").to_string();
+    leaflet = leaflet.replace("{LAYER}", &layer).replace("{PROJECT}", &project).replace("{WMTS_DOMAIN}", &wmts_domain);
+    /*let path: String = ""
+    let mut contents: String = fs::read_to_string(path).unwrap();*/
+    
+
+    return HttpResponse::Ok()
+    .content_type("text/html")
+    .body(leaflet)
+}
 
 async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Responder {
     /*let domain = req.connection_info().host().to_owned();
@@ -231,6 +252,7 @@ async fn main() -> std::io::Result<()> {
             //.service(web::resource("/wmts/1.0.0/GetCapabilities").route(web::get().to(get_capabilities)))
             //.service(web::resource("/wmts/1.0.0/GetTile").to(gettile))
             .service(web::resource("/projects/{project}/services/wmts").to(wmts_service))
+            .service(web::resource("/projects/{project}/layers/{layer}/leaflet").to(leaflet_service))
             //.service(web::resource("/wmts/{tail}*").route(web::get().to(tile)))
             //.service(web::resource("/index.html").route(web::get().to(|| async { "Hello world!" }))
             //.service(web::resource("/").to(index))

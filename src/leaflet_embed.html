@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Leaflet Map with WMTS Layer</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+  </head>
+  <body>
+    <div id="map" style="height: 500px;"></div>
+
+    <script>
+      var map = L.map('map').setView([80, 10], 4);
+
+      L.tileLayer('{WMTS_DOMAIN}/projects/{PROJECT}/services/wmts?request=GetTile&layer={LAYER}&tilematrixset=webmercator&tilematrix={z}&tilecol={x}&tilerow={y}', {
+        attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      }).addTo(map);
+
+      
+    </script>
+  </body>
+</html>
+
