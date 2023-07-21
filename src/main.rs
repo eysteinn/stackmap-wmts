@@ -101,9 +101,31 @@ async fn fetch_image(url: String, tilename: String) -> String{
 }
 
 
-async fn leaflet_service(route: web::Path<(String, String,)>, req: HttpRequest) -> impl Responder {
+//async fn leaflet_service(route: web::Path<(String, String,)>, req: HttpRequest) -> impl Responder {
+async fn leaflet_service_dynamic(route: web::Path<(String, String,)>, req: HttpRequest) -> HttpResponse {
     let (project, layer) = route.into_inner();
-    let wmts_domain: String;
+    leaflet_service(project, layer, req).await
+}
+
+async fn leaflet_service_query(query_params: web::Query<HashMap<String, String>>, // Deserialize query parameters into HashMap
+    req: HttpRequest) -> HttpResponse {
+    
+    let project = query_params.get("project").cloned().unwrap_or_default();
+
+    let layer = query_params.get("layer").cloned().unwrap_or_default();
+    
+    if !layer.is_empty() && !project.is_empty() {
+        return leaflet_service(project, layer, req).await;
+    }
+    return HttpResponse::BadRequest()
+    .content_type("text/plain;charset=UTF-8")
+    .body("Request parameters 'project' or 'layer' missing or not of the right type")
+    
+}
+
+async fn leaflet_service(project: String, layer: String, req: HttpRequest) -> HttpResponse {
+    //let (project, layer) = route.into_inner();
+    /*let wmts_domain: String;
     if let Ok(value) = env::var("WMTS_DOMAIN") {
         wmts_domain = value;
         println!("Found WMTS_DOMAIN env variable")
@@ -111,7 +133,8 @@ async fn leaflet_service(route: web::Path<(String, String,)>, req: HttpRequest) 
         let scheme = req.connection_info().scheme().to_owned();
         let host = req.connection_info().host().to_owned();
         wmts_domain = format!("{}://{}", scheme, host);
-    }
+    }*/
+    let wmts_domain = get_domain(req);
     let mut leaflet = include_str!("leaflet_embed.html").to_string();
     leaflet = leaflet.replace("{LAYER}", &layer).replace("{PROJECT}", &project).replace("{WMTS_DOMAIN}", &wmts_domain);
     /*let path: String = ""
@@ -123,7 +146,49 @@ async fn leaflet_service(route: web::Path<(String, String,)>, req: HttpRequest) 
     .body(leaflet)
 }
 
-async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Responder {
+async fn wmts_service_dynamic(route: web::Path<(String,)>, req: HttpRequest) -> impl Responder {
+    let project: String = route.into_inner().0.to_lowercase();
+    wmts_service(project, req).await
+}
+
+
+async fn wmts_service_query(query_params: web::Query<HashMap<String, String>>, req: HttpRequest) -> HttpResponse {
+    /*let query_str = req.query_string().to_lowercase();
+    let query_map: HashMap<String, String> = qs::from_str(&query_str).unwrap();*/
+    
+    if let Some(value) = query_params.get("project") {
+        return wmts_service(value.to_string(), req).await;
+    }
+    
+    HttpResponse::BadRequest()
+        .content_type("text/plain;charset=UTF-8")
+        .body("Request parameter 'project' missing or not of the right type")
+}
+
+async fn wmts_service_query2(req: HttpRequest) -> impl Responder {
+    let query_str = req.query_string().to_lowercase();
+    let query_map: HashMap<String, String> = qs::from_str(&query_str).unwrap();
+    if let Some(value) = query_map.get("project") {
+        return wmts_service(value.to_string(), req).await;
+    }
+    HttpResponse::Ok()
+    .content_type("text/plain;charset=UTF-8")
+    .body("Request parameter missing or not of right type")
+}
+fn get_domain(req: HttpRequest) -> String {
+    let wmts_domain: String;
+    if let Ok(value) = env::var("WMTS_DOMAIN") {
+        wmts_domain = value;
+        println!("Found WMTS_DOMAIN env variable")
+    } else {
+        let scheme = req.connection_info().scheme().to_owned();
+        let host = req.connection_info().host().to_owned();
+        wmts_domain = format!("{}://{}", scheme, host);
+    }
+    wmts_domain
+}
+async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // impl Responder {
+
     /*let domain = req.connection_info().host().to_owned();
     println!("Domain: {}", domain);
     println!("Scheme: {}", req.connection_info().scheme());
@@ -137,7 +202,7 @@ async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Res
         wmts_host = "http://localhost:9099".to_string();
         println!("WMTS_HOST not found, setting value to {}", wmts_host);*/
     //let wmts_host = env::var("EXTERNAL_WMTS_HOST").expect("Environmental variable EXTERNAL_WMTS_HOST not found");
-    let project = route.into_inner().0.to_lowercase();
+    //let project: String = route.into_inner().0.to_lowercase();
     // TODO: need to make sure that 'project' string does not contain any '../' to prevent injection
 
     let query_str = req.query_string().to_lowercase();
@@ -146,7 +211,7 @@ async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Res
         
         if value == "getcapabilities" {
             println!("GetCapabilities");
-            let wmts_domain: String;
+            /*let wmts_domain: String;
             if let Ok(value) = env::var("WMTS_DOMAIN") {
                 wmts_domain = value;
                 println!("Found WMTS_DOMAIN env variable")
@@ -154,7 +219,8 @@ async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Res
                 let scheme = req.connection_info().scheme().to_owned();
                 let host = req.connection_info().host().to_owned();
                 wmts_domain = format!("{}://{}", scheme, host);
-            }
+            }*/
+            let wmts_domain = get_domain(req);
             let path = format!("./projects/{}/WMTSCapabilities.xml", project);
             let mut contents: String = fs::read_to_string(path).unwrap();
             contents = contents.replace("{WMTS_DOMAIN}", &wmts_domain);
@@ -208,13 +274,14 @@ async fn wmts_service(route: web::Path<(String,)>, req: HttpRequest) -> impl Res
                  extent.minx, extent.miny, extent.maxx, extent.maxy, width, height);*/
             
 
-            let mut url: String = format!("{}?map=/mapfiles/{}/rasters.map&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS={}&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true&TIME=2022-03-14T10:40:00Z",
+            let mut url: String = format!("{}?map=/mapfiles/{}/rasters.map&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={},{},{},{}&CRS=EPSG:3857&WIDTH={}&HEIGHT={}&LAYERS={}&STYLES=,&CLASSGROUP=black&FORMAT=image/png&TRANSPARENT=true", //&TIME=2022-03-14T10:40:00Z",
             wms_host, project, extent.minx, extent.miny, extent.maxx, extent.maxy, width, height, layer);
                  //extent.minx, extent.maxy, extent.maxx, extent.miny);
             
             if !timestr.is_empty() {
                 url = format!("{}&time={}", url, timestr);
             }
+            println!("{}", url);
 
             let tilename = fetch_image(url, tilename).await;
             //let bytes = fs::read("002.png").unwrap();
@@ -251,8 +318,12 @@ async fn main() -> std::io::Result<()> {
             //.wrap(middleware::Logger::default())
             //.service(web::resource("/wmts/1.0.0/GetCapabilities").route(web::get().to(get_capabilities)))
             //.service(web::resource("/wmts/1.0.0/GetTile").to(gettile))
-            .service(web::resource("/projects/{project}/services/wmts").to(wmts_service))
-            .service(web::resource("/projects/{project}/layers/{layer}/leaflet").to(leaflet_service))
+            .service(web::resource("/projects/{project}/services/wmts").to(wmts_service_dynamic))
+            .service(web::resource("/projects/{project}/layers/{layer}/leaflet").to(leaflet_service_dynamic))
+            
+            .service(web::resource("/services/wmts").to(wmts_service_query))
+            .service(web::resource("/services/leaflet").to(leaflet_service_query))
+
             //.service(web::resource("/wmts/{tail}*").route(web::get().to(tile)))
             //.service(web::resource("/index.html").route(web::get().to(|| async { "Hello world!" }))
             //.service(web::resource("/").to(index))
