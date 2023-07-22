@@ -188,7 +188,7 @@ fn get_domain(req: HttpRequest) -> String {
     wmts_domain
 }
 async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // impl Responder {
-
+    println!("Processing incoming: {}", req.uri());
     /*let domain = req.connection_info().host().to_owned();
     println!("Domain: {}", domain);
     println!("Scheme: {}", req.connection_info().scheme());
@@ -221,6 +221,7 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
                 wmts_domain = format!("{}://{}", scheme, host);
             }*/
             let wmts_domain = get_domain(req);
+            println!("Setting domain to: {}", wmts_domain);
             let path = format!("./projects/{}/WMTSCapabilities.xml", project);
             let mut contents: String = fs::read_to_string(path).unwrap();
             contents = contents.replace("{WMTS_DOMAIN}", &wmts_domain);
