@@ -306,6 +306,13 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
     //sString::from("done")
 }
 
+async fn default_route(req: HttpRequest) -> HttpResponse {
+    println!("Default route: {}", req.uri());
+    HttpResponse::NotFound()
+        .content_type("text/plain;charset=UTF-8")
+        .body("Project not found")
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     //env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -327,7 +334,11 @@ async fn main() -> std::io::Result<()> {
             //.service(web::resource("/wmts/{tail}*").route(web::get().to(tile)))
             //.service(web::resource("/index.html").route(web::get().to(|| async { "Hello world!" }))
             //.service(web::resource("/").to(index))
-            .default_service(web::route().to(|| {println!("Default Route"); HttpResponse::NotFound() }))
+
+
+            //In Default service, show what is the url!!! This will help debug qgis
+            //.default_service(web::route().to(|| {println!("Default Route"); HttpResponse::NotFound() }))
+            .default_service(web::route().to(default_route))
     })
     .bind(("127.0.0.1", 9099))?
     .run()
