@@ -16,7 +16,7 @@
         <ows:LowerCorner>-180.0 -85.0511287798066</ows:LowerCorner>
         <ows:UpperCorner>180.0 85.0511287798066</ows:UpperCorner>
       </ows:WGS84BoundingBox>
-      <ows:Identifier>modis-true-color-crefl</ows:Identifier>
+      <ows:Identifier>viirs-granule-true-color</ows:Identifier>
       <Style>
         <ows:Identifier>default</ows:Identifier>
       </Style>
@@ -36,7 +36,7 @@
         <TileMatrixSet>webmercator</TileMatrixSet>
       </TileMatrixSetLink>
       <ResourceURL format="image/png" resourceType="tile"
-              template='{WMTS_DOMAIN}/services/wmts?project=vedur&amp;request=GetTile&amp;layer=modis-true-color-crefl&amp;tilematrixset={TileMatrixSet}&amp;tilematrix={TileMatrix}&amp;tilecol={TileCol}&amp;tilerow={TileRow}&amp;format=.png' />
+              template='{WMTS_DOMAIN}/services/wmts?project=vedur&amp;request=GetTile&amp;layer=viirs-granule-true-color&amp;tilematrixset={TileMatrixSet}&amp;tilematrix={TileMatrix}&amp;tilecol={TileCol}&amp;tilerow={TileRow}&amp;format=.png' />
     </Layer>
     <TileMatrixSet>
       <ows:Identifier>webmercator</ows:Identifier>
