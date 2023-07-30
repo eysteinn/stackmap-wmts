@@ -341,7 +341,7 @@ async fn main() -> std::io::Result<()> {
             //.default_service(web::route().to(|| {println!("Default Route"); HttpResponse::NotFound() }))
             .default_service(web::route().to(default_route))
     })
-    .bind(("127.0.0.1", 9099))?
+    .bind(("0.0.0.0", 9099))?
     .run()
     .await
     /*let app = App::new()
