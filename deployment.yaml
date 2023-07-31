@@ -13,7 +13,27 @@ spec:
   type: ClusterIP
 
 ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wmts
+    #annotations:
+    #haproxy.org/path-rewrite: "/"
+spec:
+  #ingressClassName: haproxy
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /services/wmts
+        pathType: Prefix
+        backend:
+          service:
+            name: stackmap-wmts
+            port:
+              number: 9099
 
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -39,3 +59,5 @@ spec:
         env:
         - name: WMS_HOST
           value: http://stackmap-mapserver.default.svc.cluster.local:6000
+
+
