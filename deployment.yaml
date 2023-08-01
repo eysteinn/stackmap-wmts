@@ -21,8 +21,9 @@ metadata:
     #haproxy.org/path-rewrite: "/"
 spec:
   #ingressClassName: haproxy
+  ingressClassName: traefik
   rules:
-  - host: localhost
+  - host: stackmap.clouds.is
     http:
       paths:
       - path: /services/wmts
