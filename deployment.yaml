@@ -33,6 +33,13 @@ spec:
             name: stackmap-wmts
             port:
               number: 9099
+      - path: /services/leaflet
+        pathType: Prefix
+        backend:
+          service:
+            name: stackmap-wmts
+            port:
+              number: 9099
 
 ---
 apiVersion: apps/v1
