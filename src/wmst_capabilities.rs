@@ -98,11 +98,12 @@ pub async fn get_products_from_api(host: &str, project: &str) -> Vec<String> {
     let response = client.get(url).send().await.unwrap();
     //let response2 = reqwest::blocking::get(url).expect("Could not fetch url");
     println!("Got a response");
+    
     let var: UniqueProducts = response.json().await.unwrap(); //.unwrap();
 
     
     println!("{:?}", var.uniqueproducts);
-
+    
     var.uniqueproducts
 }
 /* 
@@ -152,13 +153,13 @@ impl LayerDefinition {
 }
 
 
-pub async fn make_xml(project: String, host: String) -> String {
+pub async fn make_xml(project: String, host: String, apihost: String) -> String {
     let handlebars = Handlebars::new();
 
     let si = ServiceIdentification::default();
     
     let mut layers: Vec<LayerDefinition> = Vec::new();
-    for product in get_products_from_api(&host, &project).await {
+    for product in get_products_from_api(&apihost, &project).await {
         let layer = LayerDefinition{
             product: product.to_string(),
             //product: String::from_str("viirs-granule-true-color"),

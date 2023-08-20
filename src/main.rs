@@ -217,10 +217,17 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
             let wmts_domain = get_domain(req);
             println!("Setting domain to: {}", wmts_domain);
             
+            let api_host: String;
+            if let Ok(value) = env::var("STACKMAP_API_SERVICE") {
+                api_host = value;
+            } else {
+                api_host = "http://stackmap-api.default.svc.cluster.local:3000".to_string();
+                println!("Environmental variable WMS_HOST not found, setting to {}", api_host);
+            }
             /*let path = format!("./projects/{}/WMTSCapabilities.xml", project);
             let mut contents: String = fs::read_to_string(path).unwrap();
             contents = contents.replace("{WMTS_DOMAIN}", &wmts_domain);*/
-            let contents = wmst_capabilities::make_xml(project, wmts_domain).await;
+            let contents = wmst_capabilities::make_xml(project, wmts_domain, api_host).await;
             
             //contents = contents.replace("{EXTERNAL_WMTS_HOST}", &wmts_host).replace("{PROJECT}", &project);
             //contents = contents.replace("{PROJECT}", &project);
