@@ -1,4 +1,3 @@
-mod testing;
 mod wmst_capabilities;
 
 use actix_web::{web, App, HttpRequest, HttpServer};
@@ -315,7 +314,6 @@ async fn default_route(req: HttpRequest) -> HttpResponse {
 async fn main() -> std::io::Result<()> {
     //env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    testing::testingfunc();
     //log::info!("starting HTTP server at http://localhost:9099");
     println!("starting HTTP server at http://localhost:9099");
     HttpServer::new(|| {
