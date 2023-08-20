@@ -67,6 +67,7 @@ spec:
         env:
         - name: STACKMAP_API_SERVICE
           value: http://stackmap-api.default.svc.cluster.local:3000
+
         - name: WMS_HOST
           value: http://stackmap-mapserver.default.svc.cluster.local:6000
 
