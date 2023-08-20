@@ -1,3 +1,6 @@
+mod testing;
+mod wmst_capabilities;
+
 use actix_web::{web, App, HttpRequest, HttpServer};
 use std::env;
 use std::fs;
@@ -211,20 +214,14 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
         
         if value == "getcapabilities" {
             println!("GetCapabilities");
-            /*let wmts_domain: String;
-            if let Ok(value) = env::var("WMTS_DOMAIN") {
-                wmts_domain = value;
-                println!("Found WMTS_DOMAIN env variable")
-            } else {
-                let scheme = req.connection_info().scheme().to_owned();
-                let host = req.connection_info().host().to_owned();
-                wmts_domain = format!("{}://{}", scheme, host);
-            }*/
+            
             let wmts_domain = get_domain(req);
             println!("Setting domain to: {}", wmts_domain);
-            let path = format!("./projects/{}/WMTSCapabilities.xml", project);
+            
+            /*let path = format!("./projects/{}/WMTSCapabilities.xml", project);
             let mut contents: String = fs::read_to_string(path).unwrap();
-            contents = contents.replace("{WMTS_DOMAIN}", &wmts_domain);
+            contents = contents.replace("{WMTS_DOMAIN}", &wmts_domain);*/
+            let contents = wmst_capabilities::make_xml(project, wmts_domain).await;
             
             //contents = contents.replace("{EXTERNAL_WMTS_HOST}", &wmts_host).replace("{PROJECT}", &project);
             //contents = contents.replace("{PROJECT}", &project);
@@ -318,6 +315,7 @@ async fn default_route(req: HttpRequest) -> HttpResponse {
 async fn main() -> std::io::Result<()> {
     //env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    testing::testingfunc();
     //log::info!("starting HTTP server at http://localhost:9099");
     println!("starting HTTP server at http://localhost:9099");
     HttpServer::new(|| {
