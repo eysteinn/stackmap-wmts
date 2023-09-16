@@ -56,11 +56,12 @@ spec:
       labels:
         app: stackmap-wmts
     spec:
-      
+      imagePullSecrets:
+      - name: ghcr-login-secret
       containers:
       - name: stackmap-wmts
-        image: stackmap-wmts:latest
-        imagePullPolicy: Never
+        image: ghcr.io/eysteinn/stackmap-wmts:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 9099
 

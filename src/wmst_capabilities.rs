@@ -84,7 +84,7 @@ pub fn layer_to_xml(layerdef: LayerDefinition) -> String {
 
 #[derive(Debug, Deserialize)]
 struct UniqueProducts {
-    uniqueproducts: Vec<String>
+    product_names: Vec<String>
 }
 
 pub async fn get_products_from_api(host: &str, project: &str) -> Vec<String> {
@@ -102,9 +102,9 @@ pub async fn get_products_from_api(host: &str, project: &str) -> Vec<String> {
     let var: UniqueProducts = response.json().await.unwrap(); //.unwrap();
 
     
-    println!("{:?}", var.uniqueproducts);
+    println!("{:?}", var.product_names);
     
-    var.uniqueproducts
+    var.product_names
 }
 /* 
 pub fn xml_test() -> String {
