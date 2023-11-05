@@ -1,6 +1,6 @@
 use std::{ops::Bound, str::FromStr};
 
-use chrono::{DateTime};
+use chrono::{DateTime, UTC};
 use tile_grid::Grid;
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
@@ -34,6 +34,12 @@ impl Default for ServiceIdentification {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct TimeDimension {
+    pub default: String,
+    pub values: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct LayerDefinition {
     //pub project: String,
     pub product: String,
@@ -45,6 +51,7 @@ pub struct LayerDefinition {
     pub max_lat: f64,
     pub min_lon: f64,
     pub max_lon: f64,
+    pub time_dimension: TimeDimension,
     /*pub tilematrixset: Vec<String>,
     pub resource_link: String,*/
 
@@ -62,7 +69,8 @@ impl Default for LayerDefinition {
             min_lat: -85.0511287798066,
             max_lat: 85.0511287798066,
             min_lon: -180.0,
-            max_lon: 180.0
+            max_lon: 180.0,
+            time_dimension: TimeDimension { default: "".to_string(), values: "".to_string() }
         }
     }
 }
@@ -85,6 +93,30 @@ pub fn layer_to_xml(layerdef: LayerDefinition) -> String {
 #[derive(Debug, Deserialize)]
 struct UniqueProducts {
     product_names: Vec<String>
+}
+
+#[derive(Debug, Deserialize)]
+struct ProductTimes {
+    times: Vec<String>
+    //times: Vec<DateTime<UTC>>
+}
+
+
+pub async fn get_product_times_from_api(host: &str, project: &str, product: &str) -> Vec<String> {
+
+    let mut url = "{host}/api/v1/projects/{project}/products/{product}/times".to_string();
+    url = url.replace("{project}", project).replace("{product}", product).replace("{host}", host);
+
+    println!("URL: {}", url);
+
+    let client = reqwest::Client::new();
+    let response = client.get(url).send().await.unwrap();
+    //let response2 = reqwest::blocking::get(url).expect("Could not fetch url");
+    println!("Got a response");
+
+    let var: ProductTimes = response.json().await.unwrap(); //.unwrap();
+
+    var.times
 }
 
 pub async fn get_products_from_api(host: &str, project: &str) -> Vec<String> {
@@ -156,15 +188,30 @@ impl LayerDefinition {
 pub async fn make_xml(project: String, host: String, apihost: String) -> String {
     let handlebars = Handlebars::new();
 
-    let si = ServiceIdentification::default();
+    let si: ServiceIdentification = ServiceIdentification::default();
     
     let mut layers: Vec<LayerDefinition> = Vec::new();
     for product in get_products_from_api(&apihost, &project).await {
+
+        let times = get_product_times_from_api(apihost.as_str(), project.as_str(), product.as_str());
+        let lst = times.await;
+        println!("times: {:?}", lst);
+        let values = lst.join(",");
+        let last_value = lst.last().map_or(String::new(), |s| s.to_string());
+
+        println!("Last value: {}", last_value);
+
+        let timedim = TimeDimension{
+            values: values,
+            default: last_value,
+            
+        };
         let layer = LayerDefinition{
             product: product.to_string(),
             //product: String::from_str("viirs-granule-true-color"),
             title: product.to_string(),
             description: "".to_string(),
+            time_dimension: timedim,
             ..Default::default()
         };
         layers.push(layer)

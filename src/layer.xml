@@ -11,6 +11,13 @@
   <Contents>
     {{#each layers}}
     <Layer>
+      <Dimension>
+        <ows:Identifier>Time</ows:Identifier>
+        <ows:UOM>ISO8601</ows:UOM>
+        <Default>{{time_dimension.default}}</Default>
+        <Current>true</Current>
+        <Value>{{time_dimension.values}}</Value>
+      </Dimension>
       <ows:Title>{{title}}</ows:Title>
       <ows:Abstract>{{description}}</ows:Abstract>
       <ows:WGS84BoundingBox>
