@@ -332,9 +332,12 @@ async fn main() -> std::io::Result<()> {
             //.wrap(middleware::Logger::default())
             //.service(web::resource("/wmts/1.0.0/GetCapabilities").route(web::get().to(get_capabilities)))
             //.service(web::resource("/wmts/1.0.0/GetTile").to(gettile))
-            .service(web::resource("/projects/{project}/services/wmts").to(wmts_service_dynamic))
+            /* .service(web::resource("/projects/{project}/services/wmts").to(wmts_service_dynamic))
             .service(web::resource("/projects/{project}/layers/{layer}/leaflet").to(leaflet_service_dynamic))
-            
+            */
+            .service(web::resource("/services/projects/{project}/wmts").to(wmts_service_dynamic))
+            .service(web::resource("/services/projects/{project}/products/{layer}/leaflet").to(leaflet_service_dynamic))
+
             .service(web::resource("/services/wmts").to(wmts_service_query))
             .service(web::resource("/services/leaflet").to(leaflet_service_query))
 
