@@ -222,7 +222,7 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
                 api_host = value;
             } else {
                 api_host = "http://stackmap-api.default.svc.cluster.local:3000".to_string();
-                println!("Environmental variable WMS_HOST not found, setting to {}", api_host);
+                println!("Environmental variable STACKMAP_API_SERVICE not found, setting to {}", api_host);
             }
             /*let path = format!("./projects/{}/WMTSCapabilities.xml", project);
             let mut contents: String = fs::read_to_string(path).unwrap();
@@ -248,7 +248,7 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
                 println!("Environmental variable WMS_HOST not found, setting to {}", wms_host);
             }
             
-            let zoom = query_map.get("tilematrix").unwrap().parse::<u8>().unwrap();
+            let zoom: u8 = query_map.get("tilematrix").unwrap().parse::<u8>().unwrap();
             let xtile = query_map.get("tilecol").unwrap().parse::<u32>().unwrap();
             let ytile = query_map.get("tilerow").unwrap().parse::<u32>().unwrap();
             let layer = query_map.get("layer").expect("Missing parameter: LAYER");
@@ -259,8 +259,11 @@ async fn wmts_service(project: String, req: HttpRequest) -> HttpResponse { // im
                 /*Use Chrono to format the timestr in to actual datetime object. 
                 This will make directory structure predictable.*/
                 //let dt = timestr.parse::<DateTime<chrono::UTC>>().expect("Could not parse time parameter");
+                timestr = timestr.to_uppercase();
+                println!("Parsing time: {}", timestr);
+                
                 let dt = timestr.parse::<DateTime<chrono::UTC>>().expect("Could not parse time parameter");
-                timestr = dt.format("%Y-%m-%dT%H:%M:%S").to_string();
+                //timestr = dt.format("%Y-%m-%dT%H:%M:%S").to_string();
                 timedir = dt.format("%Y%m%dT%H%M%S").to_string();
             }
             //let timestr = query_map.get("time").unwrap_or("").to_string();
