@@ -13,33 +13,65 @@ spec:
   type: ClusterIP
 
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
 metadata:
   name: wmts
-    #annotations:
-    #haproxy.org/path-rewrite: "/"
 spec:
-  #ingressClassName: haproxy
-  ingressClassName: traefik
-  rules:
-  - host: stackmap.clouds.is
-    http:
-      paths:
-      - path: /services/wmts
-        pathType: Prefix
-        backend:
-          service:
-            name: stackmap-wmts
-            port:
-              number: 9099
-      - path: /services/leaflet
-        pathType: Prefix
-        backend:
-          service:
-            name: stackmap-wmts
-            port:
-              number: 9099
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`stackmap.clouds.is`) && PathPrefix(`/services/projects/{[A-Za-z0-9_]+}/wmts`)
+      kind: Rule
+      services:
+        - name: stackmap-wmts
+          port: 9099
+
+    - match: Host(`stackmap.clouds.is`) && PathPrefix(`/services/projects/{[A-Za-z0-9_]+}/products/{[A-Za-z0-9_]+}/leaflet`)
+      kind: Rule
+      services:
+        - name: stackmap-wmts
+          port: 9099
+
+    - match: Host(`stackmap.clouds.is`) && PathPrefix(`/services/wmts`)
+      kind: Rule
+      services:
+        - name: stackmap-wmts
+          port: 9099
+          
+    - match: Host(`stackmap.clouds.is`) && PathPrefix(`/services/leaflet`)
+      kind: Rule
+      services:
+        - name: stackmap-wmts
+          port: 9099
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: wmts
+#     #annotations:
+#     #haproxy.org/path-rewrite: "/"
+# spec:
+#   #ingressClassName: haproxy
+#   ingressClassName: traefik
+#   rules:
+#   - host: stackmap.clouds.is
+#     http:
+#       paths:
+#       - path: /services/wmts
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: stackmap-wmts
+#             port:
+#               number: 9099
+#       - path: /services/leaflet
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: stackmap-wmts
+#             port:
+#               number: 9099
 
 ---
 apiVersion: apps/v1
