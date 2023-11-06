@@ -8,15 +8,60 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
   </head>
   <body>
+    <select id="timestampSelect">
+      <option value="default">Select a timestamp</option>
+    </select>
+
+    <script>
+      const selectElement = document.getElementById('timestampSelect');
+      let timestampsData = [];
+      // Replace with your API endpoint URL
+      const apiEndpoint = '{WMTS_DOMAIN}/api/v1/projects/{PROJECT}/products/{LAYER}/times';
+      
+      function dateChanged() {
+            // Get the selected value from the dropdown
+            const selectedValue = selectElement.value;
+
+            // Do something with the selected value
+            console.log('Selected value:', selectedValue);
+            layer.setUrl("{WMTS_DOMAIN}/services/wmts?project={PROJECT}&request=GetTile&layer={LAYER}&tilematrixset=webmercator&tilematrix={z}&tilecol={x}&tilerow={y}&time="+selectedValue)
+        }
+      selectElement.addEventListener('change', dateChanged);
+
+      // Fetch data from the API
+      fetch(apiEndpoint)
+        .then(response => response.json())
+        .then(data => {
+          times = data.times
+          timestampsData = data;
+          // Check if the data is an array of timestamps
+          if (Array.isArray(times)) {
+            // Populate the dropdown with timestamps
+            times.forEach(timestamp => {
+              const option = document.createElement('option');
+              option.value = timestamp;
+              option.text = timestamp //new Date(timestamp).toLocaleString(); // Convert timestamp to a readable format
+              selectElement.appendChild(option);
+            });
+          } else {
+            console.error('API did not return an array of timestamps');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching data from the API:', error);
+        });
+    </script>
+    
     <div id="map" style="height: 500px;"></div>
 
     <script>
       var map = L.map('map').setView([80, 10], 4);
 
       //L.tileLayer('{WMTS_DOMAIN}/projects/{PROJECT}/services/wmts?request=GetTile&layer={LAYER}&tilematrixset=webmercator&tilematrix={z}&tilecol={x}&tilerow={y}', {
-        L.tileLayer('{WMTS_DOMAIN}/services/wmts?project={PROJECT}&request=GetTile&layer={LAYER}&tilematrixset=webmercator&tilematrix={z}&tilecol={x}&tilerow={y}', {
+      layer = L.tileLayer('{WMTS_DOMAIN}/services/wmts?project={PROJECT}&request=GetTile&layer={LAYER}&tilematrixset=webmercator&tilematrix={z}&tilecol={x}&tilerow={y}', {
         attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-      }).addTo(map);
+      });
+      layer.addTo(map);
 
       
     </script>
